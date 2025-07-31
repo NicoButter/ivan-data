@@ -1,0 +1,41 @@
+# Directorios virtuales
+venv/
+env/
+.venv/
+venv/**
+env/**
+
+# Archivos de Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de ejecución
+dist/
+build/
+*.egg-info/
+*.exe
+*.msi
+
+# Archivos de datos
+agenda.json.enc
+
+# Archivos temporales
+*.tmp
+*.temp
