@@ -494,6 +494,27 @@ class AgendaApp:
                  bg='#4CAF50', fg='white', width=15).pack(pady=10)
         tk.Button(window, text="Cancelar", command=window.destroy, 
                  bg='#f44336', fg='white', width=15).pack(pady=5)
+        
+    def create_backup(self):
+        """Crea una copia de seguridad con timestamp."""
+        if os.path.exists(AGENDA_FILE):
+            backup_dir = "backups"
+            if not os.path.exists(backup_dir):
+                os.makedirs(backup_dir)
+            
+            # Crear nombre de archivo con timestamp
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = os.path.join(backup_dir, f"agenda_backup_{timestamp}.json.enc")
+            
+            try:
+                with open(AGENDA_FILE, 'rb') as f:
+                    data = f.read()
+                with open(backup_file, 'wb') as f:
+                    f.write(data)
+                print("Backup creado exitosamente:", backup_file)
+            except Exception as e:
+                print(f"Error creando backup: {e}")
 
 def main():
     """Inicia la aplicación."""

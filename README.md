@@ -9,6 +9,12 @@ Aplicación de gestión de contactos con encriptación de datos.
 - Interfaz gráfica intuitiva
 - Seguridad mediante contraseña
 
+## Copias de seguridad
+
+El archivo `agenda.json.enc` contiene todos tus datos. Se recomienda:
+1. Mantener una copia de seguridad en otro lugar
+2. La aplicación crea automáticamente backups con extensión `.backup`
+
 ## Requisitos
 
 - Python 3.6+
