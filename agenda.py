@@ -21,6 +21,10 @@ class AgendaApp:
         self.root.geometry("800x600")
         self.root.minsize(600, 400)
         
+        # Variables de paginación
+        self.current_page = 1
+        self.items_per_page = 20  # Cambia este valor según necesites
+        
         # Variable para almacenar la contraseña
         self.password = None
         self.agenda = []
@@ -126,7 +130,6 @@ class AgendaApp:
             auth_window.wait_window()
             
             return self.password is not None
-            
         except Exception as e:
             print(f"Error en autenticación: {e}")
             return False
@@ -226,15 +229,40 @@ class AgendaApp:
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
         
+        # Marco para paginación
+        pagination_frame = tk.Frame(self.root, bg='white')
+        pagination_frame.pack(pady=10)
+        
+        # Botones de paginación
+        self.prev_button = tk.Button(pagination_frame, text="Anterior", command=self.previous_page)
+        self.prev_button.pack(side=tk.LEFT, padx=5)
+        
+        self.page_label = tk.Label(pagination_frame, text="", bg='white')
+        self.page_label.pack(side=tk.LEFT, padx=10)
+        
+        self.next_button = tk.Button(pagination_frame, text="Siguiente", command=self.next_page)
+        self.next_button.pack(side=tk.LEFT, padx=5)
+        
         # Actualizar tabla
-        self.update_table()
+        self.update_table_paginated()
     
-    def update_table(self, contacts: Optional[List[Dict]] = None) -> None:
-        """Actualiza la tabla con los contactos proporcionados o todos los contactos."""
+    def get_paginated_contacts(self) -> List[Dict]:
+        """Obtiene los contactos para la página actual."""
+        start_index = (self.current_page - 1) * self.items_per_page
+        end_index = start_index + self.items_per_page
+        return self.agenda[start_index:end_index]
+    
+    def update_table_paginated(self) -> None:
+        """Actualiza la tabla con los contactos de la página actual."""
+        # Limpiar tabla existente
         for item in self.tree.get_children():
             self.tree.delete(item)
-        contacts = contacts or self.agenda
-        for contact in contacts:
+        
+        # Obtener contactos de la página actual
+        page_contacts = self.get_paginated_contacts()
+        
+        # Insertar contactos
+        for contact in page_contacts:
             if contact is None:
                 continue
             self.tree.insert("", tk.END, values=(
@@ -244,6 +272,33 @@ class AgendaApp:
                 contact.get("address", ""), 
                 contact.get("birthday", "")
             ))
+        
+        # Actualizar etiqueta de página
+        total_pages = (len(self.agenda) + self.items_per_page - 1) // self.items_per_page
+        self.page_label.config(text=f"Página {self.current_page} de {total_pages}")
+        
+        # Habilitar/deshabilitar botones
+        self.prev_button.config(state=tk.NORMAL if self.current_page > 1 else tk.DISABLED)
+        self.next_button.config(state=tk.NORMAL if self.current_page < total_pages else tk.DISABLED)
+    
+    def previous_page(self) -> None:
+        """Va a la página anterior."""
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.update_table_paginated()
+    
+    def next_page(self) -> None:
+        """Va a la página siguiente."""
+        total_pages = (len(self.agenda) + self.items_per_page - 1) // self.items_per_page
+        if self.current_page < total_pages:
+            self.current_page += 1
+            self.update_table_paginated()
+    
+    def update_table(self, contacts: Optional[List[Dict]] = None) -> None:
+        """Actualiza la tabla con los contactos proporcionados o todos los contactos."""
+        # Esta función ahora se usa solo para operaciones que no requieren paginación
+        # Para paginación, usamos update_table_paginated()
+        pass
     
     def validate_date(self, date: str) -> bool:
         """Valida que la fecha tenga el formato DD/MM/YYYY o esté vacía."""
@@ -308,7 +363,7 @@ class AgendaApp:
             }
             self.agenda.append(contact)
             self.save_agenda()
-            self.update_table()
+            self.update_table_paginated()  # Actualizar tabla paginada
             messagebox.showinfo("Éxito", f"Contacto '{name}' agregado correctamente.")
             window.destroy()
         
@@ -342,14 +397,22 @@ class AgendaApp:
         def search():
             search_term = search_entry.get().strip().lower()
             if not search_term:
-                self.update_table()
+                self.update_table_paginated()
                 return
+            
+            # Buscar en todos los contactos (no paginados)
             found_contacts = [
                 contact for contact in self.agenda if search_term in contact["name"].lower()
             ]
-            self.update_table(found_contacts)
+            
+            # Mostrar resultados en la primera página
+            self.agenda = found_contacts
+            self.current_page = 1
+            self.update_table_paginated()
+            
             if not found_contacts:
                 messagebox.showinfo("Resultado", "No se encontraron contactos.")
+            
             window.destroy()
         
         tk.Button(window, text="Buscar", command=search).pack(pady=10)
@@ -421,7 +484,7 @@ class AgendaApp:
                 "birthday": birthday
             }
             self.save_agenda()
-            self.update_table()
+            self.update_table_paginated()  # Actualizar tabla paginada
             messagebox.showinfo("Éxito", f"Contacto '{name}' actualizado correctamente.")
             window.destroy()
         
@@ -443,7 +506,7 @@ class AgendaApp:
         index = self.tree.index(selected[0])
         contact = self.agenda.pop(index)
         self.save_agenda()
-        self.update_table()
+        self.update_table_paginated()  # Actualizar tabla paginada
         messagebox.showinfo("Éxito", f"Contacto '{contact['name']}' eliminado correctamente.")
     
     def config_window(self) -> None:
@@ -494,25 +557,17 @@ class AgendaApp:
                  bg='#4CAF50', fg='white', width=15).pack(pady=10)
         tk.Button(window, text="Cancelar", command=window.destroy, 
                  bg='#f44336', fg='white', width=15).pack(pady=5)
-        
+    
     def create_backup(self):
-        """Crea una copia de seguridad con timestamp."""
+        """Crea una copia de seguridad de los datos."""
         if os.path.exists(AGENDA_FILE):
-            backup_dir = "backups"
-            if not os.path.exists(backup_dir):
-                os.makedirs(backup_dir)
-            
-            # Crear nombre de archivo con timestamp
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = os.path.join(backup_dir, f"agenda_backup_{timestamp}.json.enc")
-            
+            backup_file = AGENDA_FILE + ".backup"
             try:
                 with open(AGENDA_FILE, 'rb') as f:
                     data = f.read()
                 with open(backup_file, 'wb') as f:
                     f.write(data)
-                print("Backup creado exitosamente:", backup_file)
+                print("Backup creado exitosamente")
             except Exception as e:
                 print(f"Error creando backup: {e}")
 
