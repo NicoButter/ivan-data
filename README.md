@@ -1,46 +1,104 @@
-# Agenda Tradicional Encriptada
 
-Aplicación de gestión de contactos con encriptación de datos.
+# 🔐 ContactVault
 
-## Características
+**ContactVault** es una aplicación de gestión de contactos personales con cifrado de datos, ideal para mantener tu agenda privada, segura y accesible.
 
-- Gestión de contactos (agregar, buscar, editar, eliminar)
-- Encriptación de datos sensibles
-- Interfaz gráfica intuitiva
-- Seguridad mediante contraseña
+🔐 Porque hasta los números de tu suegra merecen privacidad.
 
-## Copias de seguridad
+---
 
-El archivo `agenda.json.enc` contiene todos tus datos. Se recomienda:
-1. Mantener una copia de seguridad en otro lugar
-2. La aplicación crea automáticamente backups con extensión `.backup`
+## ✨ Características
 
-## Requisitos
+- ✅ **Agregar, buscar, editar y eliminar contactos**
+- 📄 **Exportación de contactos a PDF**
+- 🔐 **Encriptación de datos sensibles con contraseña maestra**
+- 🖼️ **Interfaz gráfica amigable (Tkinter)**
+- 💾 **Backups automáticos de tus datos**
+- ⚙️ Totalmente offline y sin necesidad de internet
 
-- Python 3.6+
-- Tkinter (incluido en la mayoría de instalaciones de Python)
+---
 
-## Instalación
+## 💻 Entorno de desarrollo
 
-### Para usuarios finales:
+Proyecto creado y probado en:
 
-1. Descarga el archivo ejecutable `AgendaEncriptada.exe` (Windows)
-2. Ejecuta el archivo
+- 🐍 **Python 3.11+**
+- 🧪 **openSUSE Tumbleweed**
+- 💻 Laptop: **Victus16 by HP**
+- GUI: **Tkinter**
+- Cifrado con [`cryptography`](https://pypi.org/project/cryptography/)
 
-### Para desarrolladores:
+---
+
+## 🗂️ Estructura del proyecto
+
+```
+contactvault/
+├── main.py                 # Archivo principal (contiene la clase AgendaApp)
+├── export_pdf.py           # Funciones de exportación a PDF
+├── backup_manager.py       # Funciones de backup
+├── utils.py                # Funciones auxiliares
+├── requirements.txt        # Dependencias
+├── README.md               # Documentación
+└── agenda.json.enc         # Archivo de datos (opcional)
+```
+
+---
+
+## ☁️ Copias de seguridad
+
+- Los datos se almacenan encriptados en `agenda.json.enc`.
+- Se generan backups automáticos con extensión `.backup`.
+
+---
+
+## 🚀 Instalación
+
+### 🔰 Para usuarios finales (Windows):
+
+📦 *Próximamente disponible:* instalador `.exe` para que tus contactos puedan usarla sin complicaciones.
+
+1. Descargá el instalador desde la sección de **Releases**
+2. Ejecutalo normalmente
+
+### 👨‍💻 Para desarrolladores:
 
 ```bash
-# Clona el repositorio
 git clone <url-del-repositorio>
-cd agenda-proyecto
+cd contactvault
 
-# Crea y activa entorno virtual
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# o venv\Scripts\activate  # Windows
+source venv/bin/activate      # Linux / MacOS
+# o venv\Scripts\activate   # Windows
 
-# Instala dependencias
 pip install -r requirements.txt
 
-# Ejecuta la aplicación
-python agenda.py
+python main.py
+```
+
+---
+
+## 🧾 Licencia
+
+Este proyecto está bajo la **Licencia MIT**.  
+Podés usarlo, modificarlo, compartirlo y mejorarlo libremente.
+
+Ver el archivo [`LICENSE`](./LICENSE) para más información.
+
+---
+
+## 📬 Contacto
+
+Desarrollado por **Nicolás Butterfield**  
+📧 nicobutter@gmail.com
+
+¡Se aceptan ideas, sugerencias, mejoras o memes!
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Generar instalador `.exe` para Windows
+- [ ] Mejoras visuales a la interfaz
+- [ ] Buscador con filtros avanzados
+- [ ] Sincronización entre dispositivos (opcional)
