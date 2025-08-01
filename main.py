@@ -13,17 +13,18 @@ import re
 # Archivo para los datos encriptados
 AGENDA_FILE = "agenda.json.enc"
 
+# Importar funciones de otros módulos
+# Importar funciones de otros módulos
+from export_pdf import export_contact_to_pdf, export_selected_to_pdf, export_all_to_pdf
+from backup_manager import create_backup
+
 class AgendaApp:
     def __init__(self, root: tk.Tk):
         """Inicializa la aplicación de agenda."""
         self.root = root
-        self.root.title("Agendas Iván. 2025")
+        self.root.title("Agenda Tradicional (Encriptada)")
         self.root.geometry("800x600")
         self.root.minsize(600, 400)
-        
-        # Variables de paginación
-        self.current_page = 1
-        self.items_per_page = 20  # Cambia este valor según necesites
         
         # Variable para almacenar la contraseña
         self.password = None
@@ -49,7 +50,7 @@ class AgendaApp:
             # Crear ventana modal de autenticación
             auth_window = tk.Toplevel(self.root)
             auth_window.title("Autenticación")
-            auth_window.geometry("400x300")
+            auth_window.geometry("400x250")
             auth_window.transient(self.root)
             auth_window.grab_set()
             
@@ -113,8 +114,8 @@ class AgendaApp:
             button_frame.pack(pady=20)
             
             accept_btn = tk.Button(button_frame, text="ACEPTAR", command=submit_auth, 
-                                width=10, height=1, bg='#4CAF50', fg='white',
-                                font=("Arial", 10, "bold"))
+                                 width=10, height=1, bg='#4CAF50', fg='white',
+                                 font=("Arial", 10, "bold"))
             accept_btn.pack(side=tk.LEFT, padx=5)
             
             # Asociar Enter al botón de aceptar
@@ -122,8 +123,8 @@ class AgendaApp:
             accept_btn.focus_set()  # Enfocar el botón de aceptar
             
             cancel_btn = tk.Button(button_frame, text="CANCELAR", command=cancel_auth, 
-                                width=10, height=1, bg='#f44336', fg='white',
-                                font=("Arial", 10, "bold"))
+                                 width=10, height=1, bg='#f44336', fg='white',
+                                 font=("Arial", 10, "bold"))
             cancel_btn.pack(side=tk.LEFT, padx=5)
             
             # Asociar Esc al botón de cancelar
@@ -202,12 +203,13 @@ class AgendaApp:
         button_frame = tk.Frame(self.root, bg='white')
         button_frame.pack(pady=10, padx=10, fill=tk.X)
         
-        # Botones
+        # Botones principales
         buttons_config = [
             ("Agregar Contacto", self.add_contact_window),
             ("Buscar Contacto", self.search_contact_window),
             ("Editar Contacto", self.edit_contact_window),
             ("Eliminar Contacto", self.delete_contact),
+            ("Exportar", self.export_menu),  # Nuevo botón de exportación
             ("Configuración", self.config_window),
             ("Salir", self.root.quit)
         ]
@@ -244,40 +246,15 @@ class AgendaApp:
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
         
-        # Marco para paginación
-        pagination_frame = tk.Frame(self.root, bg='white')
-        pagination_frame.pack(pady=10)
-        
-        # Botones de paginación
-        self.prev_button = tk.Button(pagination_frame, text="Anterior", command=self.previous_page)
-        self.prev_button.pack(side=tk.LEFT, padx=5)
-        
-        self.page_label = tk.Label(pagination_frame, text="", bg='white')
-        self.page_label.pack(side=tk.LEFT, padx=10)
-        
-        self.next_button = tk.Button(pagination_frame, text="Siguiente", command=self.next_page)
-        self.next_button.pack(side=tk.LEFT, padx=5)
-        
         # Actualizar tabla
-        self.update_table_paginated()
+        self.update_table()
     
-    def get_paginated_contacts(self) -> List[Dict]:
-        """Obtiene los contactos para la página actual."""
-        start_index = (self.current_page - 1) * self.items_per_page
-        end_index = start_index + self.items_per_page
-        return self.agenda[start_index:end_index]
-    
-    def update_table_paginated(self) -> None:
-        """Actualiza la tabla con los contactos de la página actual."""
-        # Limpiar tabla existente
+    def update_table(self, contacts: Optional[List[Dict]] = None) -> None:
+        """Actualiza la tabla con los contactos proporcionados o todos los contactos."""
         for item in self.tree.get_children():
             self.tree.delete(item)
-        
-        # Obtener contactos de la página actual
-        page_contacts = self.get_paginated_contacts()
-        
-        # Insertar contactos
-        for contact in page_contacts:
+        contacts = contacts or self.agenda
+        for contact in contacts:
             if contact is None:
                 continue
             self.tree.insert("", tk.END, values=(
@@ -287,33 +264,6 @@ class AgendaApp:
                 contact.get("address", ""), 
                 contact.get("birthday", "")
             ))
-        
-        # Actualizar etiqueta de página
-        total_pages = (len(self.agenda) + self.items_per_page - 1) // self.items_per_page
-        self.page_label.config(text=f"Página {self.current_page} de {total_pages}")
-        
-        # Habilitar/deshabilitar botones
-        self.prev_button.config(state=tk.NORMAL if self.current_page > 1 else tk.DISABLED)
-        self.next_button.config(state=tk.NORMAL if self.current_page < total_pages else tk.DISABLED)
-    
-    def previous_page(self) -> None:
-        """Va a la página anterior."""
-        if self.current_page > 1:
-            self.current_page -= 1
-            self.update_table_paginated()
-    
-    def next_page(self) -> None:
-        """Va a la página siguiente."""
-        total_pages = (len(self.agenda) + self.items_per_page - 1) // self.items_per_page
-        if self.current_page < total_pages:
-            self.current_page += 1
-            self.update_table_paginated()
-    
-    def update_table(self, contacts: Optional[List[Dict]] = None) -> None:
-        """Actualiza la tabla con los contactos proporcionados o todos los contactos."""
-        # Esta función ahora se usa solo para operaciones que no requieren paginación
-        # Para paginación, usamos update_table_paginated()
-        pass
     
     def validate_date(self, date: str) -> bool:
         """Valida que la fecha tenga el formato DD/MM/YYYY o esté vacía."""
@@ -378,18 +328,28 @@ class AgendaApp:
             }
             self.agenda.append(contact)
             self.save_agenda()
-            self.update_table_paginated()  # Actualizar tabla paginada
+            self.update_table()
             messagebox.showinfo("Éxito", f"Contacto '{name}' agregado correctamente.")
             window.destroy()
         
-        # Botones
+        # Botones con atajos de teclado
         button_frame = tk.Frame(window)
         button_frame.pack(pady=10)
         
-        tk.Button(button_frame, text="Guardar", command=save_contact, 
-                 bg='#4CAF50', fg='white', width=10).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Cancelar", command=window.destroy, 
-                 bg='#f44336', fg='white', width=10).pack(side=tk.LEFT, padx=5)
+        save_btn = tk.Button(button_frame, text="Guardar", command=save_contact, 
+                            bg='#4CAF50', fg='white', width=10)
+        save_btn.pack(side=tk.LEFT, padx=5)
+        save_btn.bind('<Return>', lambda event: save_contact())
+        
+        cancel_btn = tk.Button(button_frame, text="Cancelar", command=window.destroy, 
+                              bg='#f44336', fg='white', width=10)
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn.bind('<Escape>', lambda event: window.destroy())
+        
+        # Permitir que Enter active el botón de guardar
+        window.bind('<Return>', lambda event: save_contact())
+        # Permitir que Esc cierre la ventana
+        window.bind('<Escape>', lambda event: window.destroy())
     
     def search_contact_window(self) -> None:
         """Abre una ventana para buscar contactos."""
@@ -412,26 +372,32 @@ class AgendaApp:
         def search():
             search_term = search_entry.get().strip().lower()
             if not search_term:
-                self.update_table_paginated()
+                self.update_table()
                 return
-            
-            # Buscar en todos los contactos (no paginados)
             found_contacts = [
                 contact for contact in self.agenda if search_term in contact["name"].lower()
             ]
-            
-            # Mostrar resultados en la primera página
-            self.agenda = found_contacts
-            self.current_page = 1
-            self.update_table_paginated()
-            
+            self.update_table(found_contacts)
             if not found_contacts:
                 messagebox.showinfo("Resultado", "No se encontraron contactos.")
-            
             window.destroy()
         
-        tk.Button(window, text="Buscar", command=search).pack(pady=10)
-        tk.Button(window, text="Cancelar", command=window.destroy).pack(pady=5)
+        # Botones con atajos de teclado
+        button_frame = tk.Frame(window)
+        button_frame.pack(pady=10)
+        
+        search_btn = tk.Button(button_frame, text="Buscar", command=search)
+        search_btn.pack(side=tk.LEFT, padx=5)
+        search_btn.bind('<Return>', lambda event: search())
+        
+        cancel_btn = tk.Button(button_frame, text="Cancelar", command=window.destroy)
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn.bind('<Escape>', lambda event: window.destroy())
+        
+        # Permitir que Enter active el botón de buscar
+        window.bind('<Return>', lambda event: search())
+        # Permitir que Esc cierre la ventana
+        window.bind('<Escape>', lambda event: window.destroy())
     
     def edit_contact_window(self) -> None:
         """Abre una ventana para editar un contacto seleccionado."""
@@ -499,18 +465,28 @@ class AgendaApp:
                 "birthday": birthday
             }
             self.save_agenda()
-            self.update_table_paginated()  # Actualizar tabla paginada
+            self.update_table()
             messagebox.showinfo("Éxito", f"Contacto '{name}' actualizado correctamente.")
             window.destroy()
         
-        # Botones
+        # Botones con atajos de teclado
         button_frame = tk.Frame(window)
         button_frame.pack(pady=10)
         
-        tk.Button(button_frame, text="Guardar", command=save_changes, 
-                 bg='#4CAF50', fg='white', width=10).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Cancelar", command=window.destroy, 
-                 bg='#f44336', fg='white', width=10).pack(side=tk.LEFT, padx=5)
+        save_btn = tk.Button(button_frame, text="Guardar", command=save_changes, 
+                            bg='#4CAF50', fg='white', width=10)
+        save_btn.pack(side=tk.LEFT, padx=5)
+        save_btn.bind('<Return>', lambda event: save_changes())
+        
+        cancel_btn = tk.Button(button_frame, text="Cancelar", command=window.destroy, 
+                              bg='#f44336', fg='white', width=10)
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn.bind('<Escape>', lambda event: window.destroy())
+        
+        # Permitir que Enter active el botón de guardar
+        window.bind('<Return>', lambda event: save_changes())
+        # Permitir que Esc cierre la ventana
+        window.bind('<Escape>', lambda event: window.destroy())
     
     def delete_contact(self) -> None:
         """Elimina un contacto seleccionado."""
@@ -521,7 +497,7 @@ class AgendaApp:
         index = self.tree.index(selected[0])
         contact = self.agenda.pop(index)
         self.save_agenda()
-        self.update_table_paginated()  # Actualizar tabla paginada
+        self.update_table()
         messagebox.showinfo("Éxito", f"Contacto '{contact['name']}' eliminado correctamente.")
     
     def config_window(self) -> None:
@@ -568,10 +544,114 @@ class AgendaApp:
                 self.password = old_password  # Restaurar contraseña anterior si falla
                 messagebox.showerror("Error", f"No se pudo actualizar la contraseña: {str(e)}")
         
-        tk.Button(window, text="Guardar", command=change_password, 
-                 bg='#4CAF50', fg='white', width=15).pack(pady=10)
-        tk.Button(window, text="Cancelar", command=window.destroy, 
-                 bg='#f44336', fg='white', width=15).pack(pady=5)
+        # Botones con atajos de teclado
+        button_frame = tk.Frame(window)
+        button_frame.pack(pady=10)
+        
+        save_btn = tk.Button(button_frame, text="Guardar", command=change_password, 
+                            bg='#4CAF50', fg='white', width=15)
+        save_btn.pack(side=tk.LEFT, padx=5)
+        save_btn.bind('<Return>', lambda event: change_password())
+        
+        cancel_btn = tk.Button(button_frame, text="Cancelar", command=window.destroy, 
+                              bg='#f44336', fg='white', width=15)
+        cancel_btn.pack(side=tk.LEFT, padx=5)
+        cancel_btn.bind('<Escape>', lambda event: window.destroy())
+        
+        # Permitir que Enter active el botón de guardar
+        window.bind('<Return>', lambda event: change_password())
+        # Permitir que Esc cierre la ventana
+        window.bind('<Escape>', lambda event: window.destroy())
+    
+    def export_menu(self):
+        """Muestra menú de opciones de exportación."""
+        menu_window = tk.Toplevel(self.root)
+        menu_window.title("Exportar Contactos")
+        menu_window.geometry("300x200")
+        menu_window.transient(self.root)
+        menu_window.grab_set()
+        
+        # Centrar ventana
+        menu_window.update_idletasks()
+        x = (menu_window.winfo_screenwidth() // 2) - (menu_window.winfo_width() // 2)
+        y = (menu_window.winfo_screenheight() // 2) - (menu_window.winfo_height() // 2)
+        menu_window.geometry(f"+{x}+{y}")
+        
+        tk.Label(menu_window, text="Seleccionar opción de exportación:", 
+                 font=("Arial", 12, "bold")).pack(pady=10)
+        
+        # Botones de exportación
+        tk.Button(menu_window, text="Exportar Contacto Seleccionado", 
+                 command=self.export_selected_to_pdf, width=30).pack(pady=5)
+        
+        tk.Button(menu_window, text="Exportar Todos los Contactos", 
+                 command=self.export_all_to_pdf, width=30).pack(pady=5)
+        
+        # Eliminar esta línea ya que no existe la función
+        # tk.Button(menu_window, text="Exportar Contacto Individual", 
+        #          command=self.export_individual_contact, width=30).pack(pady=5)
+        
+        tk.Button(menu_window, text="Cancelar", command=menu_window.destroy, 
+                 width=15).pack(pady=10)
+    
+    def export_selected_to_pdf(self):
+        """Exporta los contactos seleccionados a PDF."""
+        try:
+            selected = self.tree.selection()
+            if not selected:
+                messagebox.showerror("Error", "Seleccione al menos un contacto para exportar.")
+                return
+                
+            # Obtener contactos seleccionados
+            selected_contacts = []
+            for item in selected:
+                index = self.tree.index(item)
+                selected_contacts.append(self.agenda[index])
+            
+            success, message = export_selected_to_pdf(selected_contacts)
+            if success:
+                messagebox.showinfo("Éxito", message)
+            else:
+                messagebox.showerror("Error", message)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron exportar los contactos: {str(e)}")
+    
+    def export_all_to_pdf(self):
+        """Exporta todos los contactos a PDF."""
+        try:
+            if not self.agenda:
+                messagebox.showinfo("Información", "No hay contactos para exportar.")
+                return
+            
+            success, message = export_all_to_pdf(self.agenda)
+            if success:
+                messagebox.showinfo("Éxito", message)
+            else:
+                messagebox.showerror("Error", message)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo exportar la agenda: {str(e)}")
+    
+    def export_individual_contact(self):
+        """Exporta un contacto individual seleccionado."""
+        try:
+            selected = self.tree.selection()
+            if not selected:
+                messagebox.showerror("Error", "Seleccione un contacto para exportar.")
+                return
+            
+            index = self.tree.index(selected[0])
+            contact = self.agenda[index]
+            
+            success, message = export_contact_to_pdf(contact)
+            if success:
+                messagebox.showinfo("Éxito", message)
+            else:
+                messagebox.showerror("Error", message)
+                
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo exportar el contacto: {str(e)}")
     
     def create_backup(self):
         """Crea una copia de seguridad de los datos."""
@@ -583,8 +663,10 @@ class AgendaApp:
                 with open(backup_file, 'wb') as f:
                     f.write(data)
                 print("Backup creado exitosamente")
+                messagebox.showinfo("Éxito", "Backup creado exitosamente")
             except Exception as e:
                 print(f"Error creando backup: {e}")
+                messagebox.showerror("Error", f"Error creando backup: {str(e)}")
 
 def main():
     """Inicia la aplicación."""
