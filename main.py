@@ -14,16 +14,16 @@ import re
 AGENDA_FILE = "agenda.json.enc"
 
 # Importar funciones de otros módulos
-# Importar funciones de otros módulos
 from export_pdf import export_contact_to_pdf, export_selected_to_pdf, export_all_to_pdf
 from backup_manager import create_backup
+from messaging import send_email, send_whatsapp
 
 class AgendaApp:
     def __init__(self, root: tk.Tk):
         """Inicializa la aplicación de agenda."""
         self.root = root
         self.root.title("Agenda Tradicional (Encriptada)")
-        self.root.geometry("800x600")
+        self.root.geometry("1024x800")
         self.root.minsize(600, 400)
         
         # Variable para almacenar la contraseña
@@ -246,8 +246,165 @@ class AgendaApp:
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
         
+        # Vincular eventos de clic
+        self.tree.bind('<Button-3>', self.show_context_menu)  # Botón derecho
+        self.tree.bind('<Double-1>', self.edit_contact_double_click)  # Doble clic
+        
         # Actualizar tabla
         self.update_table()
+    
+    def show_context_menu(self, event):
+        """Muestra el menú contextual cuando se hace clic derecho en un contacto."""
+        # Obtener el ítem bajo el cursor
+        item = self.tree.identify_row(event.y)
+        if item:
+            # Seleccionar el ítem
+            self.tree.selection_set(item)
+            
+            # Crear menú contextual
+            context_menu = tk.Menu(self.root, tearoff=0)
+            
+            # Obtener datos del contacto seleccionado
+            index = self.tree.index(item)
+            contact = self.agenda[index]
+            
+            # Agregar opciones al menú
+            context_menu.add_command(label="📧 Enviar Email", 
+                                   command=lambda: self.send_email_action(contact))
+            context_menu.add_command(label="📱 WhatsApp", 
+                                   command=lambda: self.send_whatsapp_action(contact))
+            
+            # Agregar separador
+            context_menu.add_separator()
+            
+            # Opciones de edición
+            context_menu.add_command(label="Editar Contacto", 
+                                   command=lambda: self.edit_contact_by_index(index))
+            context_menu.add_command(label="Eliminar Contacto", 
+                                   command=lambda: self.delete_contact_by_index(index))
+            
+            # Mostrar menú contextual
+            context_menu.post(event.x_root, event.y_root)
+    
+    def edit_contact_double_click(self, event):
+        """Edita un contacto con doble clic."""
+        item = self.tree.identify_row(event.y)
+        if item:
+            index = self.tree.index(item)
+            self.edit_contact_by_index(index)
+    
+    def send_email_action(self, contact):
+        """Envía un correo electrónico al contacto."""
+        success, message = send_email(contact)
+        if success:
+            messagebox.showinfo("Éxito", message)
+        else:
+            messagebox.showerror("Error", message)
+    
+    def send_whatsapp_action(self, contact):
+        """Envía un mensaje de WhatsApp al contacto."""
+        success, message = send_whatsapp(contact)
+        if success:
+            messagebox.showinfo("Éxito", message)
+        else:
+            messagebox.showerror("Error", message)
+    
+    def edit_contact_by_index(self, index):
+        """Edita un contacto por su índice."""
+        if index < len(self.agenda):
+            contact = self.agenda[index]
+            # Crear ventana de edición
+            window = tk.Toplevel(self.root)
+            window.title("Editar Contacto")
+            window.geometry("450x400")
+            window.transient(self.root)
+            window.grab_set()
+            
+            # Centrar ventana
+            window.update_idletasks()
+            x = (window.winfo_screenwidth() // 2) - (window.winfo_width() // 2)
+            y = (window.winfo_screenheight() // 2) - (window.winfo_height() // 2)
+            window.geometry(f"+{x}+{y}")
+            
+            # Formulario
+            form_frame = tk.Frame(window, padx=20, pady=20)
+            form_frame.pack(fill=tk.BOTH, expand=True)
+            
+            tk.Label(form_frame, text="Nombre *:", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky=tk.W, pady=5)
+            name_entry = tk.Entry(form_frame, width=30)
+            name_entry.insert(0, contact["name"])
+            name_entry.grid(row=1, column=0, sticky=tk.W, pady=5)
+            
+            tk.Label(form_frame, text="Teléfono:", font=("Arial", 10, "bold")).grid(row=2, column=0, sticky=tk.W, pady=5)
+            phone_entry = tk.Entry(form_frame, width=30)
+            phone_entry.insert(0, contact["phone"])
+            phone_entry.grid(row=3, column=0, sticky=tk.W, pady=5)
+            
+            tk.Label(form_frame, text="Correo:", font=("Arial", 10, "bold")).grid(row=4, column=0, sticky=tk.W, pady=5)
+            email_entry = tk.Entry(form_frame, width=30)
+            email_entry.insert(0, contact["email"])
+            email_entry.grid(row=5, column=0, sticky=tk.W, pady=5)
+            
+            tk.Label(form_frame, text="Dirección:", font=("Arial", 10, "bold")).grid(row=6, column=0, sticky=tk.W, pady=5)
+            address_entry = tk.Entry(form_frame, width=30)
+            address_entry.insert(0, contact["address"])
+            address_entry.grid(row=7, column=0, sticky=tk.W, pady=5)
+            
+            tk.Label(form_frame, text="Cumpleaños (DD/MM/YYYY):", font=("Arial", 10, "bold")).grid(row=8, column=0, sticky=tk.W, pady=5)
+            birthday_entry = tk.Entry(form_frame, width=30)
+            birthday_entry.insert(0, contact.get("birthday", ""))
+            birthday_entry.grid(row=9, column=0, sticky=tk.W, pady=5)
+            
+            def save_changes():
+                name = name_entry.get().strip()
+                birthday = birthday_entry.get().strip()
+                if not name:
+                    messagebox.showerror("Error", "El nombre es obligatorio.")
+                    return
+                if not self.validate_date(birthday):
+                    messagebox.showerror("Error", "Formato de fecha inválido. Use DD/MM/YYYY o déjelo vacío.")
+                    return
+                self.agenda[index] = {
+                    "name": name,
+                    "phone": phone_entry.get().strip(),
+                    "email": email_entry.get().strip(),
+                    "address": address_entry.get().strip(),
+                    "birthday": birthday
+                }
+                self.save_agenda()
+                self.update_table()
+                messagebox.showinfo("Éxito", f"Contacto '{name}' actualizado correctamente.")
+                window.destroy()
+            
+            # Botones con atajos de teclado
+            button_frame = tk.Frame(window)
+            button_frame.pack(pady=10)
+            
+            save_btn = tk.Button(button_frame, text="Guardar", command=save_changes, 
+                                bg='#4CAF50', fg='white', width=10)
+            save_btn.pack(side=tk.LEFT, padx=5)
+            save_btn.bind('<Return>', lambda event: save_changes())
+            
+            cancel_btn = tk.Button(button_frame, text="Cancelar", command=window.destroy, 
+                                  bg='#f44336', fg='white', width=10)
+            cancel_btn.pack(side=tk.LEFT, padx=5)
+            cancel_btn.bind('<Escape>', lambda event: window.destroy())
+            
+            # Permitir que Enter active el botón de guardar
+            window.bind('<Return>', lambda event: save_changes())
+            # Permitir que Esc cierre la ventana
+            window.bind('<Escape>', lambda event: window.destroy())
+    
+    def delete_contact_by_index(self, index):
+        """Elimina un contacto por su índice."""
+        if index < len(self.agenda):
+            contact = self.agenda[index]
+            if messagebox.askyesno("Confirmar Eliminación", 
+                                 f"¿Estás seguro de que deseas eliminar a '{contact['name']}'?"):
+                self.agenda.pop(index)
+                self.save_agenda()
+                self.update_table()
+                messagebox.showinfo("Éxito", f"Contacto '{contact['name']}' eliminado correctamente.")
     
     def update_table(self, contacts: Optional[List[Dict]] = None) -> None:
         """Actualiza la tabla con los contactos proporcionados o todos los contactos."""
@@ -643,7 +800,6 @@ class AgendaApp:
             
             index = self.tree.index(selected[0])
             contact = self.agenda[index]
-            
             success, message = export_contact_to_pdf(contact)
             if success:
                 messagebox.showinfo("Éxito", message)
